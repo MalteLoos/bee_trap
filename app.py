@@ -3,6 +3,8 @@ from mesa.visualization.components import AgentPortrayalStyle
 
 from model import ForagingModel
 from cell_agent import FoodCell
+from agent import CreatureAgent
+
 
 def _rgb_to_hex(r, g, b):
     r_int = int(max(0, min(255, r * 255)))
@@ -29,6 +31,43 @@ def agent_portrayal(agent):
         else:
             color = "#e8e8e8"
         return AgentPortrayalStyle(marker="s", size=200, zorder=0, color=color)
+
+
+def dual_axis_post_process(ax):
+    """Split alive creatures and food remaining onto separate y-axes."""
+    line_by_label = {line.get_label(): line for line in ax.lines}
+    alive_line = line_by_label.get("alive_creatures")
+    food_line = line_by_label.get("food_remaining")
+    if alive_line is None or food_line is None:
+        return
+
+    alive_x = alive_line.get_xdata()
+    alive_y = alive_line.get_ydata()
+    alive_color = alive_line.get_color()
+
+    food_x = food_line.get_xdata()
+    food_y = food_line.get_ydata()
+    food_color = food_line.get_color()
+
+    ax.cla()
+    ax_right = ax.twinx()
+
+    left_plot = ax.plot(alive_x, alive_y, color=alive_color, label="alive_creatures")[0]
+    right_plot = ax_right.plot(
+        food_x,
+        food_y,
+        color=food_color,
+        label="food_remaining",
+    )[0]
+
+    ax.set_ylabel("alive_creatures", color=alive_color)
+    ax.tick_params(axis="y", labelcolor=alive_color)
+
+    ax_right.set_ylabel("food_remaining", color=food_color)
+    ax_right.tick_params(axis="y", labelcolor=food_color)
+
+    ax.grid(True, alpha=0.25)
+    ax.legend([left_plot, right_plot], ["alive_creatures", "food_remaining"], loc="best")
 
 
 model_params = {
@@ -59,10 +98,10 @@ model = ForagingModel()
 survival_plot = make_plot_component(
     {"alive_creatures": "red", "food_remaining": "green"},
     backend="matplotlib",
+    post_process=dual_axis_post_process,
 )
 
 renderer = SpaceRenderer(model, backend="matplotlib").setup_agents(agent_portrayal)
-renderer.draw_agents()
 renderer.render()
 
 page = SolaraViz(

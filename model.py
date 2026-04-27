@@ -38,12 +38,12 @@ class ForagingModel(Model):
         
         #energy parameters
         energy_max=200.0,
-        energy_decay=0.5,        #energy lost passively
-        energy_move_cost=1.0,    #extra energy lost when moving
+        energy_decay=0.1,        #energy lost passively
+        energy_move_cost=0.5,    #extra energy lost when moving
         energy_food_gain=20.0,   #energy restored per food unit
 
         #temperature parameters
-        temp_safe=36.0,          #starting temp and safe threshold
+        temp_safe=30.0,          #starting temp and safe threshold
         temp_crit=42.0,          #ending temp and death threshold
         temp_heat_rate=0.5,      #temp rise per step outside nest
         temp_cool_rate=1.0,      #temp drop per step inside nest
@@ -82,6 +82,9 @@ class ForagingModel(Model):
         #ABC waggle dance board: {(x, y): quality_score}
         #employed bees write here when they return; onlookers read it.
         self.waggle_board = {}
+
+        #food deposited by returning creatures at the nest
+        self.nest_food_store = 0.0
 
         #build environment and place bees
         self._init_cells(num_food_clusters, food_coverage)
@@ -197,15 +200,17 @@ class ForagingModel(Model):
 
     def count_alive(self):
         from agent import CreatureAgent
-        return len(self.agents_by_type[CreatureAgent])
+        return len(self.agents_by_type.get(CreatureAgent, []))
 
     def count_food(self):
-        return sum(a.food_amount for a in self.agents_by_type[FoodCell])
+        return self.nest_food_store + sum(a.food_amount for a in self.agents_by_type[FoodCell])
 
     #steps (ends when all agent have died)
     def step(self):
         from agent import CreatureAgent
-        self.agents_by_type[CreatureAgent].shuffle().do("step")
+        creatures = self.agents_by_type.get(CreatureAgent)
+        if creatures is not None:
+            creatures.shuffle().do("step")
         self.datacollector.collect(self)
         if self.count_alive() == 0:
             self.running = False

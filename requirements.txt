@@ -4,4 +4,6 @@ pandas==3.0.2
 python-dateutil==2.9.0.post0
 scipy==1.17.1
 six==1.17.0
+solara==1.57.3
+starlette<1.0.0
 tqdm==4.67.3
